@@ -2,7 +2,7 @@
 
 A native mobile MVP for iOS and Android, built with React Native, Expo, and TypeScript.
 
-## Version 1.1.2 updates
+## Version 1.2.0 updates
 
 - Added member name and email onboarding
 - Added a dedicated Member Pass tab
@@ -54,6 +54,10 @@ The MVP deliberately uses local demo state. Before App Store or Play Store launc
 - Push notifications
 - Analytics, crash reporting, legal terms, and privacy policy
 - Final logo, app icon, event photography, and store screenshots
+
+## Phase two backend foundation
+
+The repository now includes a Supabase migration for profiles, events, backend-enforced admin/staff/customer roles, granular staff permissions, event assignments, Row Level Security, and audit logs. Follow `docs/SUPABASE_SETUP.md` to create and link the project. Mobile authentication will be connected after the migration is applied and the public project URL and anonymous key are configured locally.
 
 ## Suggested production architecture
 

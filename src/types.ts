@@ -1,10 +1,25 @@
 export type MembershipPlan = 'monthly' | 'annual';
 export type EventTier = 'included' | 'premium';
 export type TabKey = 'home' | 'events' | 'pass' | 'tickets' | 'profile';
+export type UserRole = 'admin' | 'staff' | 'customer';
+
+export interface StaffPermissions {
+  canViewEvents: boolean;
+  canCreateEvents: boolean;
+  canEditEvents: boolean;
+  canDeleteEvents: boolean;
+  canPublishEvents: boolean;
+  canManageInventory: boolean;
+  canViewGuestList: boolean;
+  canScanTickets: boolean;
+  canIssueRefunds: boolean;
+  scopeAllEvents: boolean;
+}
 
 export interface MemberProfile {
   fullName: string;
   email: string;
+  role?: UserRole;
 }
 
 export interface TicketType {
