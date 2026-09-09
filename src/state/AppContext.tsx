@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 import { EVENTS } from '../data/events';
 import { CheckInResult, EventItem, MemberProfile, Membership, MembershipPlan, Reservation, Ticket, TicketOrder } from '../types';
+import { useAuth } from './AuthContext';
 
 interface AppStateValue {
   membership: Membership;
@@ -29,7 +30,7 @@ const defaultMembership: Membership = {
   renewalDate: null,
 };
 
-const STORAGE_KEY = '@vibe-districts/demo-state-v1';
+const STORAGE_KEY_PREFIX = '@vibe-districts/demo-state-v2';
 const AppStateContext = createContext<AppStateValue | null>(null);
 
 function confirmationCode() {
@@ -45,18 +46,29 @@ function ticketPayload(ticketId: string, eventId: string) {
 }
 
 export function AppStateProvider({ children }: PropsWithChildren) {
+  const { session } = useAuth();
+  const storageKey = `${STORAGE_KEY_PREFIX}:${session?.user.id ?? 'signed-out'}`;
   const [membership, setMembership] = useState<Membership>(defaultMembership);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [orders, setOrders] = useState<TicketOrder[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [hasOnboarded, setHasOnboarded] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
+    let cancelled = false;
+    setHydratedKey(null);
+    setMembership(defaultMembership);
+    setReservations([]);
+    setOrders([]);
+    setTickets([]);
+    setProfile(null);
+    setHasOnboarded(false);
+
+    AsyncStorage.getItem(storageKey)
       .then(value => {
-        if (!value) return;
+        if (!value || cancelled) return;
         const parsed = JSON.parse(value) as {
           membership: Membership;
           reservations: Reservation[];
@@ -73,15 +85,16 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setHasOnboarded(parsed.hasOnboarded);
       })
       .catch(() => undefined)
-      .finally(() => setHydrated(true));
-  }, []);
+      .finally(() => { if (!cancelled) setHydratedKey(storageKey); });
+    return () => { cancelled = true; };
+  }, [storageKey]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ membership, reservations, orders, tickets, profile, hasOnboarded })).catch(
+    if (hydratedKey !== storageKey) return;
+    AsyncStorage.setItem(storageKey, JSON.stringify({ membership, reservations, orders, tickets, profile, hasOnboarded })).catch(
       () => undefined,
     );
-  }, [membership, reservations, orders, tickets, profile, hasOnboarded, hydrated]);
+  }, [membership, reservations, orders, tickets, profile, hasOnboarded, hydratedKey, storageKey]);
 
   const activate = (plan: MembershipPlan) => {
     const now = new Date();
@@ -210,13 +223,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setTickets([]);
         setProfile(null);
         setHasOnboarded(false);
-        AsyncStorage.removeItem(STORAGE_KEY).catch(() => undefined);
+        AsyncStorage.removeItem(storageKey).catch(() => undefined);
       },
     }),
-    [membership, reservations, orders, tickets, profile, hasOnboarded],
+    [membership, reservations, orders, tickets, profile, hasOnboarded, storageKey],
   );
 
-  if (!hydrated) return null;
+  if (hydratedKey !== storageKey) return null;
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }
 
