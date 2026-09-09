@@ -46,6 +46,15 @@ function ticketPayload(ticketId: string, eventId: string) {
   return `VDT1|${ticketId}|${eventId}|${Math.random().toString(36).slice(2, 14)}`;
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return fallback;
+}
+
 export function AppStateProvider({ children }: PropsWithChildren) {
   const { session } = useAuth();
   const storageKey = `${STORAGE_KEY_PREFIX}:${session?.user.id ?? 'signed-out'}`;
@@ -129,7 +138,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       setMembership(current => ({ ...current, creditsRemaining: current.creditsRemaining - 1 }));
       return { ok: true, message: `Your member admission is confirmed. ${cloud.spotsRemaining} spots remain.` };
     } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : 'Reservation could not be completed.' };
+      return { ok: false, message: errorMessage(error, 'Reservation could not be completed.') };
     }
   };
 
@@ -142,7 +151,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       setMembership(current => ({ ...current, creditsRemaining: Math.min(current.creditsRemaining + 1, current.creditsTotal) }));
       return { ok: true, message: 'Your event credit and member spot were restored.' };
     } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : 'Cancellation could not be completed.' };
+      return { ok: false, message: errorMessage(error, 'Cancellation could not be completed.') };
     }
   };
 
