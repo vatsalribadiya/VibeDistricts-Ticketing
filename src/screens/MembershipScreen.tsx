@@ -9,10 +9,17 @@ import { MembershipPlan } from '../types';
 export function MembershipScreen({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { activate } = useAppState();
   const [selected, setSelected] = useState<MembershipPlan>('annual');
-  const complete = () => {
-    activate(selected);
+  const [submitting, setSubmitting] = useState(false);
+  const complete = async () => {
+    setSubmitting(true);
+    const result = await activate(selected);
+    setSubmitting(false);
+    if (!result.ok) {
+      Alert.alert('Membership unavailable', result.message);
+      return;
+    }
     onClose();
-    Alert.alert('Welcome to Vibe Districts', 'Your demo membership is now active.');
+    Alert.alert('Welcome to Vibe Districts', result.message);
   };
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -49,8 +56,8 @@ export function MembershipScreen({ visible, onClose }: { visible: boolean; onClo
               </View>
             ))}
           </View>
-          <PrimaryButton onPress={complete}>START {selected.toUpperCase()} MEMBERSHIP</PrimaryButton>
-          <Text style={styles.demo}>Demo checkout—production build will connect to Stripe.</Text>
+          <PrimaryButton onPress={complete}>{submitting ? 'ACTIVATING…' : `START ${selected.toUpperCase()} MEMBERSHIP`}</PrimaryButton>
+          <Text style={styles.demo}>Temporary test activation. Stripe checkout comes next.</Text>
         </ScrollView>
       </SafeAreaView>
     </Modal>

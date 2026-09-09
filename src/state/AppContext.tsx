@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 import { EVENTS } from '../data/events';
 import { cancelCloudReservation, reserveCloudEvent } from '../services/events';
+import { activateDemoMembership, getMembership } from '../services/memberships';
 import { CheckInResult, EventItem, MemberProfile, Membership, MembershipPlan, Reservation, Ticket, TicketOrder } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -12,7 +13,7 @@ interface AppStateValue {
   tickets: Ticket[];
   profile: MemberProfile | null;
   hasOnboarded: boolean;
-  activate: (plan: MembershipPlan) => void;
+  activate: (plan: MembershipPlan) => Promise<{ ok: boolean; message: string }>;
   reserve: (event: EventItem) => Promise<{ ok: boolean; message: string }>;
   cancelReservation: (eventId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseTickets: (event: EventItem, ticketTypeId: string, quantity: number) => { ok: boolean; message: string; orderId?: string };
@@ -76,10 +77,11 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     setProfile(null);
     setHasOnboarded(false);
 
-    AsyncStorage.getItem(storageKey)
-      .then(value => {
-        if (!value || cancelled) return;
-        const parsed = JSON.parse(value) as {
+    Promise.all([AsyncStorage.getItem(storageKey), session ? getMembership() : Promise.resolve(null)])
+      .then(([value, cloudMembership]) => {
+        if (cancelled) return;
+        if (value) {
+          const parsed = JSON.parse(value) as {
           membership: Membership;
           reservations: Reservation[];
           orders?: TicketOrder[];
@@ -87,12 +89,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
           profile?: MemberProfile | null;
           hasOnboarded: boolean;
         };
-        setMembership(parsed.membership);
-        setReservations(parsed.reservations);
-        setOrders(parsed.orders ?? []);
-        setTickets(parsed.tickets ?? []);
-        setProfile(parsed.profile ?? null);
-        setHasOnboarded(parsed.hasOnboarded);
+          setReservations(parsed.reservations);
+          setOrders(parsed.orders ?? []);
+          setTickets(parsed.tickets ?? []);
+          setProfile(parsed.profile ?? null);
+          setHasOnboarded(parsed.hasOnboarded);
+        }
+        setMembership(cloudMembership ?? defaultMembership);
       })
       .catch(() => undefined)
       .finally(() => { if (!cancelled) setHydratedKey(storageKey); });
@@ -106,20 +109,14 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     );
   }, [membership, reservations, orders, tickets, profile, hasOnboarded, hydratedKey, storageKey]);
 
-  const activate = (plan: MembershipPlan) => {
-    const now = new Date();
-    const renewal = new Date(now);
-    if (plan === 'monthly') renewal.setMonth(renewal.getMonth() + 1);
-    else renewal.setFullYear(renewal.getFullYear() + 1);
-
-    setMembership({
-      active: true,
-      plan,
-      homeCity: 'Washington, DC',
-      creditsRemaining: plan === 'monthly' ? 2 : 24,
-      creditsTotal: plan === 'monthly' ? 2 : 24,
-      renewalDate: renewal.toISOString(),
-    });
+  const activate = async (plan: MembershipPlan) => {
+    try {
+      const nextMembership = await activateDemoMembership(plan);
+      setMembership(nextMembership);
+      return { ok: true, message: 'Your membership is active.' };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error, 'Membership could not be activated.') };
+    }
   };
 
   const reserve = async (event: EventItem) => {
@@ -135,7 +132,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     try {
       const cloud = await reserveCloudEvent(event.id);
       setReservations(current => [...current, { eventId: event.id, reservedAt: new Date().toISOString(), status: 'confirmed', confirmationCode: cloud.confirmationCode }]);
-      setMembership(current => ({ ...current, creditsRemaining: current.creditsRemaining - 1 }));
+      setMembership(current => ({ ...current, creditsRemaining: cloud.creditsRemaining }));
       return { ok: true, message: `Your member admission is confirmed. ${cloud.spotsRemaining} spots remain.` };
     } catch (error) {
       return { ok: false, message: errorMessage(error, 'Reservation could not be completed.') };
@@ -146,9 +143,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     const active = reservations.some(item => item.eventId === eventId && item.status === 'confirmed');
     if (!active) return { ok: false, message: 'Active reservation not found.' };
     try {
-      await cancelCloudReservation(eventId);
+      const cloud = await cancelCloudReservation(eventId);
       setReservations(current => current.map(item => (item.eventId === eventId ? { ...item, status: 'cancelled' as const } : item)));
-      setMembership(current => ({ ...current, creditsRemaining: Math.min(current.creditsRemaining + 1, current.creditsTotal) }));
+      setMembership(current => ({ ...current, creditsRemaining: cloud.creditsRemaining }));
       return { ok: true, message: 'Your event credit and member spot were restored.' };
     } catch (error) {
       return { ok: false, message: errorMessage(error, 'Cancellation could not be completed.') };
@@ -225,7 +222,6 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setHasOnboarded(true);
       },
       resetDemo: () => {
-        setMembership(defaultMembership);
         setReservations([]);
         setOrders([]);
         setTickets([]);

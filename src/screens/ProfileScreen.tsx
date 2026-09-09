@@ -33,7 +33,7 @@ export function ProfileScreen({ canOpenScanner, onOpenScanner, onSignOut, role }
           <Row icon="help-circle-outline" label="Help & support" value="Contact" />
         </View>
         <View style={styles.reset}><TextButton onPress={() => Alert.alert('Sign out?', 'You can sign back in with your email and password.', [{ text: 'Stay signed in', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: () => void onSignOut() }])}>Sign out</TextButton></View>
-        <View style={styles.reset}><TextButton onPress={() => Alert.alert('Reset demo data?', 'This clears local membership, reservations, and tickets but does not delete your account.', [{ text: 'Keep', style: 'cancel' }, { text: 'Reset', style: 'destructive', onPress: resetDemo }])}>Reset local demo data</TextButton></View>
+        <View style={styles.reset}><TextButton onPress={() => Alert.alert('Reset local data?', 'This clears local passes and tickets. Your Supabase account and membership remain active.', [{ text: 'Keep', style: 'cancel' }, { text: 'Reset', style: 'destructive', onPress: resetDemo }])}>Reset local data</TextButton></View>
         <Text style={styles.version}>Vibe Districts · MVP 1.2.0</Text>
       </ScrollView>
     </SafeAreaView>

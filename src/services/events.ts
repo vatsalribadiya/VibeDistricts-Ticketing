@@ -93,14 +93,15 @@ export async function deleteEvent(id: string) {
 export async function reserveCloudEvent(eventId: string) {
   const { data, error } = await client().rpc('reserve_event', { target_event_id: eventId }).single();
   if (error) throw error;
-  const result = data as { confirmation_code: string; member_spots_remaining: number };
-  return { confirmationCode: result.confirmation_code, spotsRemaining: result.member_spots_remaining };
+  const result = data as { confirmation_code: string; member_spots_remaining: number; credits_remaining: number };
+  return { confirmationCode: result.confirmation_code, spotsRemaining: result.member_spots_remaining, creditsRemaining: result.credits_remaining };
 }
 
 export async function cancelCloudReservation(eventId: string) {
-  const { data, error } = await client().rpc('cancel_event_reservation', { target_event_id: eventId });
+  const { data, error } = await client().rpc('cancel_event_reservation', { target_event_id: eventId }).single();
   if (error) throw error;
-  return data as number;
+  const result = data as { member_spots_remaining: number; credits_remaining: number };
+  return { spotsRemaining: result.member_spots_remaining, creditsRemaining: result.credits_remaining };
 }
 
 function toEventItem(event: ManagedEvent): EventItem {
