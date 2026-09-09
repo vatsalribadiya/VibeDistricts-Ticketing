@@ -93,7 +93,8 @@ export async function deleteEvent(id: string) {
 export async function reserveCloudEvent(eventId: string) {
   const { data, error } = await client().rpc('reserve_event', { target_event_id: eventId }).single();
   if (error) throw error;
-  return { confirmationCode: data.confirmation_code as string, spotsRemaining: data.member_spots_remaining as number };
+  const result = data as { confirmation_code: string; member_spots_remaining: number };
+  return { confirmationCode: result.confirmation_code, spotsRemaining: result.member_spots_remaining };
 }
 
 export async function cancelCloudReservation(eventId: string) {
