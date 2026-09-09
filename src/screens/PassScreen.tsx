@@ -10,8 +10,12 @@ import { colors } from '../theme/colors';
 export function PassScreen({ onJoin }: { onJoin: () => void }) {
   const { membership, profile, reservations } = useAppState();
   const { events } = useEvents();
-  const nextReservation = reservations.find(item => item.status === 'confirmed');
-  const event = nextReservation ? events.find(item => item.id === nextReservation.eventId) : undefined;
+  const activePass = reservations
+    .filter(item => item.status === 'confirmed')
+    .map(reservation => ({ reservation, event: events.find(item => item.id === reservation.eventId) }))
+    .find(item => item.event);
+  const nextReservation = activePass?.reservation;
+  const event = activePass?.event;
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
