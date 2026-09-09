@@ -89,22 +89,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-    if (!supabase) {
+    const client = supabase;
+    if (!client) {
       setLoading(false);
       return;
     }
 
-    supabase.auth.getSession()
+    client.auth.getSession()
       .then(({ data }) => loadAccess(data.session))
       .catch(() => loadAccess(null))
       .finally(() => setLoading(false));
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = client.auth.onAuthStateChange((_event, nextSession) => {
       setTimeout(() => loadAccess(nextSession).catch(() => undefined), 0);
     });
     const appState = AppState.addEventListener('change', state => {
-      if (state === 'active') supabase.auth.startAutoRefresh();
-      else supabase.auth.stopAutoRefresh();
+      if (state === 'active') client.auth.startAutoRefresh();
+      else client.auth.stopAutoRefresh();
     });
     return () => {
       listener.subscription.unsubscribe();
