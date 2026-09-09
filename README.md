@@ -59,6 +59,8 @@ The MVP deliberately uses local demo state. Before App Store or Play Store launc
 
 The repository now includes a Supabase migration for profiles, events, backend-enforced admin/staff/customer roles, granular staff permissions, event assignments, Row Level Security, and audit logs. Follow `docs/SUPABASE_SETUP.md` to create and link the project. Mobile authentication will be connected after the migration is applied and the public project URL and anonymous key are configured locally.
 
+The mobile app now uses Supabase email and password authentication, encrypted session storage, automatic profile loading, sign out, and role-aware scanner access. New users always begin as customers; admin and staff access comes only from database-backed assignments.
+
 ## Suggested production architecture
 
 - Mobile: React Native + Expo

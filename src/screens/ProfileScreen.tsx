@@ -4,8 +4,9 @@ import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-n
 import { PrimaryButton, TextButton } from '../components/Buttons';
 import { useAppState } from '../state/AppContext';
 import { colors } from '../theme/colors';
+import { UserRole } from '../types';
 
-export function ProfileScreen({ onOpenScanner }: { onOpenScanner: () => void }) {
+export function ProfileScreen({ canOpenScanner, onOpenScanner, onSignOut, role }: { canOpenScanner: boolean; onOpenScanner: () => void; onSignOut: () => Promise<void>; role: UserRole }) {
   const { membership, profile, reservations, tickets, resetDemo } = useAppState();
   const initials = profile?.fullName.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase() || 'VD';
   return (
@@ -18,20 +19,22 @@ export function ProfileScreen({ onOpenScanner }: { onOpenScanner: () => void }) 
           <Row icon="diamond-outline" label="Membership" value={membership.active ? `${membership.plan} · Active` : 'Not active'} />
           <Row icon="calendar-outline" label="Reservations" value={String(reservations.filter(item => item.status === 'confirmed').length)} />
           <Row icon="ticket-outline" label="Paid tickets" value={String(tickets.length)} />
+          <Row icon="shield-outline" label="Account role" value={role} />
         </View>
-        <View style={styles.operator}>
+        {canOpenScanner && <View style={styles.operator}>
           <Text style={styles.operatorLabel}>PILOT OPERATIONS</Text>
           <Text style={styles.operatorTitle}>Door check-in</Text>
           <Text style={styles.operatorBody}>Scan paid-ticket QR codes and block duplicate entry. Protect this tool with staff authentication before launch.</Text>
           <PrimaryButton onPress={onOpenScanner}>OPEN SCANNER</PrimaryButton>
-        </View>
+        </View>}
         <View style={styles.card}>
           <Row icon="notifications-outline" label="Notifications" value="Enabled" />
           <Row icon="shield-checkmark-outline" label="Membership terms" value="View" />
           <Row icon="help-circle-outline" label="Help & support" value="Contact" />
         </View>
-        <View style={styles.reset}><TextButton onPress={() => Alert.alert('Reset demo?', 'This clears your local profile, membership, reservations, and tickets.', [{ text: 'Keep', style: 'cancel' }, { text: 'Reset', style: 'destructive', onPress: resetDemo }])}>Reset local demo</TextButton></View>
-        <Text style={styles.version}>Vibe Districts · MVP 1.1.1</Text>
+        <View style={styles.reset}><TextButton onPress={() => Alert.alert('Sign out?', 'You can sign back in with your email and password.', [{ text: 'Stay signed in', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: () => void onSignOut() }])}>Sign out</TextButton></View>
+        <View style={styles.reset}><TextButton onPress={() => Alert.alert('Reset demo data?', 'This clears local membership, reservations, and tickets but does not delete your account.', [{ text: 'Keep', style: 'cancel' }, { text: 'Reset', style: 'destructive', onPress: resetDemo }])}>Reset local demo data</TextButton></View>
+        <Text style={styles.version}>Vibe Districts · MVP 1.2.0</Text>
       </ScrollView>
     </SafeAreaView>
   );

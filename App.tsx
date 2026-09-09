@@ -1,37 +1,47 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { EventDetailScreen } from './src/screens/EventDetailScreen';
 import { EventsScreen } from './src/screens/EventsScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { MembershipScreen } from './src/screens/MembershipScreen';
-import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { AuthScreen, SupabaseConfigurationScreen } from './src/screens/AuthScreen';
 import { PassScreen } from './src/screens/PassScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { ScannerScreen } from './src/screens/ScannerScreen';
 import { TicketsScreen } from './src/screens/TicketsScreen';
 import { AppStateProvider, useAppState } from './src/state/AppContext';
+import { AuthProvider, useAuth } from './src/state/AuthContext';
 import { colors } from './src/theme/colors';
 import { EventItem, TabKey } from './src/types';
 
 export default function App() {
   return (
-    <AppStateProvider>
-      <StatusBar style="light" />
-      <AppShell />
-    </AppStateProvider>
+    <AuthProvider><AppStateProvider><StatusBar style="light" /><AppShell /></AppStateProvider></AuthProvider>
   );
 }
 
 function AppShell() {
-  const { hasOnboarded, profile } = useAppState();
+  const { profile, finishOnboarding } = useAppState();
+  const auth = useAuth();
   const [tab, setTab] = useState<TabKey>('home');
   const [membershipOpen, setMembershipOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
 
-  if (!hasOnboarded || !profile) return <OnboardingScreen />;
+  useEffect(() => {
+    if (auth.profile && (profile?.email !== auth.profile.email || profile?.role !== auth.profile.role)) {
+      finishOnboarding({ fullName: auth.profile.fullName, email: auth.profile.email, role: auth.profile.role });
+    }
+  }, [auth.profile, profile, finishOnboarding]);
+
+  if (!auth.configured) return <SupabaseConfigurationScreen />;
+  if (auth.loading) return <View style={styles.loading}><ActivityIndicator color={colors.champagne} size="large" /></View>;
+  if (!auth.session) return <AuthScreen />;
+  if (!auth.profile || !profile) return <View style={styles.loading}><ActivityIndicator color={colors.champagne} size="large" /></View>;
+
+  const canScan = auth.profile.role === 'admin' || Boolean(auth.staffPermissions?.canScanTickets);
 
   return (
     <View style={styles.root}>
@@ -39,7 +49,7 @@ function AppShell() {
       {tab === 'events' && <EventsScreen onEvent={setSelectedEvent} />}
       {tab === 'pass' && <PassScreen onJoin={() => setMembershipOpen(true)} />}
       {tab === 'tickets' && <TicketsScreen />}
-      {tab === 'profile' && <ProfileScreen onOpenScanner={() => setScannerOpen(true)} />}
+      {tab === 'profile' && <ProfileScreen canOpenScanner={canScan} onOpenScanner={() => setScannerOpen(true)} onSignOut={auth.signOut} role={auth.profile.role} />}
       <TabBar selected={tab} onSelect={setTab} />
       <MembershipScreen visible={membershipOpen} onClose={() => setMembershipOpen(false)} />
       <EventDetailScreen event={selectedEvent} onClose={() => setSelectedEvent(null)} onJoin={() => setMembershipOpen(true)} />
@@ -74,6 +84,7 @@ function TabBar({ selected, onSelect }: { selected: TabKey; onSelect: (tab: TabK
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   tabBar: {
     position: 'absolute', left: 14, right: 14, bottom: Platform.OS === 'ios' ? 20 : 12,
     height: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around',
