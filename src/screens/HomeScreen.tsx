@@ -4,13 +4,14 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Brand } from '../components/Brand';
 import { PrimaryButton } from '../components/Buttons';
 import { EventCard } from '../components/EventCard';
-import { EVENTS } from '../data/events';
 import { useAppState } from '../state/AppContext';
+import { useEvents } from '../state/EventsContext';
 import { colors } from '../theme/colors';
 import { EventItem } from '../types';
 
 export function HomeScreen({ onJoin, onEvent }: { onJoin: () => void; onEvent: (event: EventItem) => void }) {
   const { membership, reservationFor } = useAppState();
+  const { events } = useEvents();
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -47,7 +48,7 @@ export function HomeScreen({ onJoin, onEvent }: { onJoin: () => void; onEvent: (
           <Text style={styles.sectionLink}>SEE ALL</Text>
         </View>
         <View style={styles.cards}>
-          {EVENTS.slice(0, 3).map(event => (
+          {events.slice(0, 3).map(event => (
             <EventCard key={event.id} event={event} reserved={Boolean(reservationFor(event.id))} onPress={() => onEvent(event)} />
           ))}
         </View>

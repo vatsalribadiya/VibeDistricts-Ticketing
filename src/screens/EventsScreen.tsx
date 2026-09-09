@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { EventCard } from '../components/EventCard';
-import { EVENTS } from '../data/events';
 import { useAppState } from '../state/AppContext';
+import { useEvents } from '../state/EventsContext';
 import { colors } from '../theme/colors';
 import { EventItem } from '../types';
 
 export function EventsScreen({ onEvent }: { onEvent: (event: EventItem) => void }) {
   const [filter, setFilter] = useState<'all' | 'included' | 'premium'>('all');
   const { reservationFor } = useAppState();
-  const visible = EVENTS.filter(event => filter === 'all' || event.tier === filter);
+  const { events } = useEvents();
+  const visible = events.filter(event => filter === 'all' || event.tier === filter);
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>

@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { EventDetailScreen } from './src/screens/EventDetailScreen';
-import { AdminUsersScreen } from './src/screens/AdminUsersScreen';
+import { AdminDashboardScreen } from './src/screens/AdminDashboardScreen';
 import { EventsScreen } from './src/screens/EventsScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { MembershipScreen } from './src/screens/MembershipScreen';
@@ -14,12 +14,13 @@ import { ScannerScreen } from './src/screens/ScannerScreen';
 import { TicketsScreen } from './src/screens/TicketsScreen';
 import { AppStateProvider, useAppState } from './src/state/AppContext';
 import { AuthProvider, useAuth } from './src/state/AuthContext';
+import { EventsProvider } from './src/state/EventsContext';
 import { colors } from './src/theme/colors';
 import { EventItem, TabKey } from './src/types';
 
 export default function App() {
   return (
-    <AuthProvider><AppStateProvider><StatusBar style="light" /><AppShell /></AppStateProvider></AuthProvider>
+    <AuthProvider><AppStateProvider><EventsProvider><StatusBar style="light" /><AppShell /></EventsProvider></AppStateProvider></AuthProvider>
   );
 }
 
@@ -50,7 +51,7 @@ function AppShell() {
       {tab === 'events' && <EventsScreen onEvent={setSelectedEvent} />}
       {tab === 'pass' && <PassScreen onJoin={() => setMembershipOpen(true)} />}
       {tab === 'tickets' && <TicketsScreen />}
-      {tab === 'admin' && auth.profile.role === 'admin' && <AdminUsersScreen />}
+      {tab === 'admin' && auth.profile.role === 'admin' && <AdminDashboardScreen />}
       {tab === 'profile' && <ProfileScreen canOpenScanner={canScan} onOpenScanner={() => setScannerOpen(true)} onSignOut={auth.signOut} role={auth.profile.role} />}
       <TabBar selected={tab} onSelect={setTab} showAdmin={auth.profile.role === 'admin'} />
       <MembershipScreen visible={membershipOpen} onClose={() => setMembershipOpen(false)} />

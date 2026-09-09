@@ -49,12 +49,14 @@ export function EventDetailScreen({ event, onClose, onJoin }: { event: EventItem
           ) : (
             <PrimaryButton onPress={reserveNow}>{event.tier === 'premium' ? 'VIEW MEMBER UPGRADE' : 'RESERVE MEMBER ADMISSION'}</PrimaryButton>
           )}
-          <View style={styles.salesDivider}><View style={styles.line} /><Text style={styles.or}>OR BUY A TICKET</Text><View style={styles.line} /></View>
-          <View style={styles.salesCard}>
-            <View><Text style={styles.salesTitle}>General tickets</Text><Text style={styles.salesFrom}>From ${Math.min(...event.ticketTypes.map(item => item.price)).toFixed(2)} + fees</Text></View>
-            <Ionicons name="ticket-outline" size={25} color={colors.champagne} />
-          </View>
-          <PrimaryButton onPress={() => setCheckoutOpen(true)}>BUY TICKETS</PrimaryButton>
+          {event.ticketTypes.length > 0 && <>
+            <View style={styles.salesDivider}><View style={styles.line} /><Text style={styles.or}>OR BUY A TICKET</Text><View style={styles.line} /></View>
+            <View style={styles.salesCard}>
+              <View><Text style={styles.salesTitle}>General tickets</Text><Text style={styles.salesFrom}>From ${Math.min(...event.ticketTypes.map(item => item.price)).toFixed(2)} + fees</Text></View>
+              <Ionicons name="ticket-outline" size={25} color={colors.champagne} />
+            </View>
+            <PrimaryButton onPress={() => setCheckoutOpen(true)}>BUY TICKETS</PrimaryButton>
+          </>}
         </ScrollView>
         <CheckoutScreen event={event} visible={checkoutOpen} onClose={() => setCheckoutOpen(false)} />
       </View>

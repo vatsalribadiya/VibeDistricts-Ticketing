@@ -63,6 +63,8 @@ The mobile app now uses Supabase email and password authentication, encrypted se
 
 Administrators also receive a protected People and Access tab for customer-to-staff role assignment, account suspension, and granular staff permission management. The screen relies on database Row Level Security rather than UI-only access checks.
 
+The admin workspace includes cloud event creation, editing, member capacity, publishing, cancellation, and deletion. Published Supabase events automatically become the customer event catalog, with the bundled demo catalog used only until the first cloud event is published.
+
 ## Suggested production architecture
 
 - Mobile: React Native + Expo

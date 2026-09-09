@@ -3,13 +3,15 @@ import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FauxQR } from '../components/FauxQR';
 import { PrimaryButton } from '../components/Buttons';
-import { eventForReservation, useAppState } from '../state/AppContext';
+import { useAppState } from '../state/AppContext';
+import { useEvents } from '../state/EventsContext';
 import { colors } from '../theme/colors';
 
 export function PassScreen({ onJoin }: { onJoin: () => void }) {
   const { membership, profile, reservations } = useAppState();
+  const { events } = useEvents();
   const nextReservation = reservations.find(item => item.status === 'confirmed');
-  const event = nextReservation ? eventForReservation(nextReservation) : undefined;
+  const event = nextReservation ? events.find(item => item.id === nextReservation.eventId) : undefined;
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
