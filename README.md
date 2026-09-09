@@ -61,6 +61,8 @@ The repository now includes a Supabase migration for profiles, events, backend-e
 
 The mobile app now uses Supabase email and password authentication, encrypted session storage, automatic profile loading, sign out, and role-aware scanner access. New users always begin as customers; admin and staff access comes only from database-backed assignments.
 
+Administrators also receive a protected People and Access tab for customer-to-staff role assignment, account suspension, and granular staff permission management. The screen relies on database Row Level Security rather than UI-only access checks.
+
 ## Suggested production architecture
 
 - Mobile: React Native + Expo

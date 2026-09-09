@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { EventDetailScreen } from './src/screens/EventDetailScreen';
+import { AdminUsersScreen } from './src/screens/AdminUsersScreen';
 import { EventsScreen } from './src/screens/EventsScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { MembershipScreen } from './src/screens/MembershipScreen';
@@ -49,8 +50,9 @@ function AppShell() {
       {tab === 'events' && <EventsScreen onEvent={setSelectedEvent} />}
       {tab === 'pass' && <PassScreen onJoin={() => setMembershipOpen(true)} />}
       {tab === 'tickets' && <TicketsScreen />}
+      {tab === 'admin' && auth.profile.role === 'admin' && <AdminUsersScreen />}
       {tab === 'profile' && <ProfileScreen canOpenScanner={canScan} onOpenScanner={() => setScannerOpen(true)} onSignOut={auth.signOut} role={auth.profile.role} />}
-      <TabBar selected={tab} onSelect={setTab} />
+      <TabBar selected={tab} onSelect={setTab} showAdmin={auth.profile.role === 'admin'} />
       <MembershipScreen visible={membershipOpen} onClose={() => setMembershipOpen(false)} />
       <EventDetailScreen event={selectedEvent} onClose={() => setSelectedEvent(null)} onJoin={() => setMembershipOpen(true)} />
       <ScannerScreen visible={scannerOpen} onClose={() => setScannerOpen(false)} />
@@ -63,13 +65,14 @@ const tabs: { key: TabKey; label: string; active: keyof typeof Ionicons.glyphMap
   { key: 'events', label: 'Events', active: 'calendar', inactive: 'calendar-outline' },
   { key: 'pass', label: 'Member Pass', active: 'qr-code', inactive: 'qr-code-outline' },
   { key: 'tickets', label: 'My Tickets', active: 'ticket', inactive: 'ticket-outline' },
+  { key: 'admin', label: 'Admin', active: 'settings', inactive: 'settings-outline' },
   { key: 'profile', label: 'Profile', active: 'person', inactive: 'person-outline' },
 ];
 
-function TabBar({ selected, onSelect }: { selected: TabKey; onSelect: (tab: TabKey) => void }) {
+function TabBar({ selected, onSelect, showAdmin }: { selected: TabKey; onSelect: (tab: TabKey) => void; showAdmin: boolean }) {
   return (
     <View style={styles.tabBar}>
-      {tabs.map(tab => {
+      {tabs.filter(tab => tab.key !== 'admin' || showAdmin).map(tab => {
         const active = selected === tab.key;
         return (
           <Pressable key={tab.key} onPress={() => onSelect(tab.key)} style={styles.tab} accessibilityRole="tab" accessibilityState={{ selected: active }}>

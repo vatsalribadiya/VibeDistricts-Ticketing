@@ -1,6 +1,6 @@
 export type MembershipPlan = 'monthly' | 'annual';
 export type EventTier = 'included' | 'premium';
-export type TabKey = 'home' | 'events' | 'pass' | 'tickets' | 'profile';
+export type TabKey = 'home' | 'events' | 'pass' | 'tickets' | 'admin' | 'profile';
 export type UserRole = 'admin' | 'staff' | 'customer';
 
 export interface StaffPermissions {
