@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 import { EVENTS } from '../data/events';
+import { cancelCloudReservation, reserveCloudEvent } from '../services/events';
 import { CheckInResult, EventItem, MemberProfile, Membership, MembershipPlan, Reservation, Ticket, TicketOrder } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -12,8 +13,8 @@ interface AppStateValue {
   profile: MemberProfile | null;
   hasOnboarded: boolean;
   activate: (plan: MembershipPlan) => void;
-  reserve: (event: EventItem) => { ok: boolean; message: string };
-  cancelReservation: (eventId: string) => void;
+  reserve: (event: EventItem) => Promise<{ ok: boolean; message: string }>;
+  cancelReservation: (eventId: string) => Promise<{ ok: boolean; message: string }>;
   purchaseTickets: (event: EventItem, ticketTypeId: string, quantity: number) => { ok: boolean; message: string; orderId?: string };
   checkInTicket: (qrPayload: string) => CheckInResult;
   reservationFor: (eventId: string) => Reservation | undefined;
@@ -112,7 +113,7 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     });
   };
 
-  const reserve = (event: EventItem) => {
+  const reserve = async (event: EventItem) => {
     if (!membership.active) return { ok: false, message: 'Choose a membership before reserving.' };
     if (event.city !== membership.homeCity) return { ok: false, message: 'This event is outside your home city.' };
     if (event.tier === 'premium') return { ok: false, message: 'This premium event requires a member upgrade.' };
@@ -122,29 +123,27 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       return { ok: false, message: 'This event is already in your reservations.' };
     }
 
-    setReservations(current => [
-      ...current,
-      {
-        eventId: event.id,
-        reservedAt: new Date().toISOString(),
-        status: 'confirmed',
-        confirmationCode: confirmationCode(),
-      },
-    ]);
-    setMembership(current => ({ ...current, creditsRemaining: current.creditsRemaining - 1 }));
-    return { ok: true, message: 'Your member admission is confirmed.' };
+    try {
+      const cloud = await reserveCloudEvent(event.id);
+      setReservations(current => [...current, { eventId: event.id, reservedAt: new Date().toISOString(), status: 'confirmed', confirmationCode: cloud.confirmationCode }]);
+      setMembership(current => ({ ...current, creditsRemaining: current.creditsRemaining - 1 }));
+      return { ok: true, message: `Your member admission is confirmed. ${cloud.spotsRemaining} spots remain.` };
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : 'Reservation could not be completed.' };
+    }
   };
 
-  const cancelReservation = (eventId: string) => {
+  const cancelReservation = async (eventId: string) => {
     const active = reservations.some(item => item.eventId === eventId && item.status === 'confirmed');
-    if (!active) return;
-    setReservations(current =>
-      current.map(item => (item.eventId === eventId ? { ...item, status: 'cancelled' as const } : item)),
-    );
-    setMembership(current => ({
-      ...current,
-      creditsRemaining: Math.min(current.creditsRemaining + 1, current.creditsTotal),
-    }));
+    if (!active) return { ok: false, message: 'Active reservation not found.' };
+    try {
+      await cancelCloudReservation(eventId);
+      setReservations(current => current.map(item => (item.eventId === eventId ? { ...item, status: 'cancelled' as const } : item)));
+      setMembership(current => ({ ...current, creditsRemaining: Math.min(current.creditsRemaining + 1, current.creditsTotal) }));
+      return { ok: true, message: 'Your event credit and member spot were restored.' };
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : 'Cancellation could not be completed.' };
+    }
   };
 
   const purchaseTickets = (event: EventItem, ticketTypeId: string, quantity: number) => {

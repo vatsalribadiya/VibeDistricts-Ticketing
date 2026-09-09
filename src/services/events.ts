@@ -17,6 +17,7 @@ export interface ManagedEvent {
   ageRequirement: string;
   dressCode: string;
   memberCapacity: number;
+  memberReservedCount: number;
   createdBy: string;
 }
 
@@ -43,7 +44,7 @@ function mapManaged(row: Record<string, any>): ManagedEvent {
     id: row.id, title: row.title, subtitle: row.subtitle, description: row.description,
     venue: row.venue, city: row.city, startsAt: row.starts_at, endsAt: row.ends_at,
     status: row.status, tier: row.tier, ageRequirement: row.age_requirement,
-    dressCode: row.dress_code, memberCapacity: row.member_capacity, createdBy: row.created_by,
+    dressCode: row.dress_code, memberCapacity: row.member_capacity, memberReservedCount: row.member_reserved_count ?? 0, createdBy: row.created_by,
   };
 }
 
@@ -89,13 +90,25 @@ export async function deleteEvent(id: string) {
   if (error) throw error;
 }
 
+export async function reserveCloudEvent(eventId: string) {
+  const { data, error } = await client().rpc('reserve_event', { target_event_id: eventId }).single();
+  if (error) throw error;
+  return { confirmationCode: data.confirmation_code as string, spotsRemaining: data.member_spots_remaining as number };
+}
+
+export async function cancelCloudReservation(eventId: string) {
+  const { data, error } = await client().rpc('cancel_event_reservation', { target_event_id: eventId });
+  if (error) throw error;
+  return data as number;
+}
+
 function toEventItem(event: ManagedEvent): EventItem {
   const date = new Date(event.startsAt);
   return {
     id: event.id, title: event.title, subtitle: event.subtitle, venue: event.venue, city: event.city,
     date: event.startsAt, displayDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase(),
     time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), tier: event.tier,
-    memberSpotsRemaining: event.memberCapacity, accent: event.tier === 'premium' ? '#382016' : '#25332B',
+    memberSpotsRemaining: Math.max(event.memberCapacity - event.memberReservedCount, 0), accent: event.tier === 'premium' ? '#382016' : '#25332B',
     tags: [event.tier], dressCode: event.dressCode, age: event.ageRequirement, ticketTypes: [],
   };
 }

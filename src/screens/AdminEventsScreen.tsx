@@ -24,7 +24,7 @@ export function AdminEventsScreen() {
     <PrimaryButton onPress={() => setEditing(null)}>CREATE EVENT</PrimaryButton>
     <View style={styles.list}>{events.map(event => <View key={event.id} style={styles.card}>
       <View style={styles.cardTop}><View style={{ flex: 1 }}><Text style={styles.eventTitle}>{event.title}</Text><Text style={styles.meta}>{new Date(event.startsAt).toLocaleString()} · {event.venue}</Text></View><Text style={[styles.status, event.status === 'published' && styles.published]}>{event.status.toUpperCase()}</Text></View>
-      <Text style={styles.detail}>{event.tier.toUpperCase()} · {event.memberCapacity} member spots · {event.ageRequirement}</Text>
+      <Text style={styles.detail}>{event.tier.toUpperCase()} · {Math.max(event.memberCapacity - event.memberReservedCount, 0)} of {event.memberCapacity} member spots remaining · {event.ageRequirement}</Text>
       <View style={styles.actions}><TextButton onPress={() => setEditing(event)}>Edit</TextButton>{event.status !== 'published' && <TextButton onPress={() => void action(() => setEventStatus(event.id, 'published'))}>Publish</TextButton>}{event.status === 'published' && <TextButton onPress={() => void action(() => setEventStatus(event.id, 'cancelled'))}>Cancel</TextButton>}<TextButton onPress={() => Alert.alert('Delete event?', 'This permanently deletes the event and cannot be undone.', [{ text: 'Keep', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => void action(() => deleteEvent(event.id)) }])}>Delete</TextButton></View>
     </View>)}</View>
     {events.length === 0 && <Text style={styles.empty}>No cloud events yet. Create the first draft.</Text>}

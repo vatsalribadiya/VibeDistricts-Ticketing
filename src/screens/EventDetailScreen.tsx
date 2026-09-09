@@ -13,8 +13,8 @@ export function EventDetailScreen({ event, onClose, onJoin }: { event: EventItem
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   if (!event) return null;
   const reservation = reservationFor(event.id);
-  const reserveNow = () => {
-    const result = reserve(event);
+  const reserveNow = async () => {
+    const result = await reserve(event);
     if (!result.ok && !membership.active) { onClose(); onJoin(); return; }
     Alert.alert(result.ok ? 'You’re on the list' : 'Reservation unavailable', result.message);
   };
@@ -44,10 +44,10 @@ export function EventDetailScreen({ event, onClose, onJoin }: { event: EventItem
           {reservation ? (
             <>
               <View style={styles.confirmed}><Ionicons name="checkmark-circle" size={22} color={colors.success} /><Text style={styles.confirmedText}>MEMBER ADMISSION CONFIRMED</Text></View>
-              <TextButton onPress={() => { cancelReservation(event.id); Alert.alert('Reservation cancelled', 'Your event credit has been restored.'); }}>Cancel reservation</TextButton>
+              <TextButton onPress={() => void cancelReservation(event.id).then(result => Alert.alert(result.ok ? 'Reservation cancelled' : 'Unable to cancel', result.message))}>Cancel reservation</TextButton>
             </>
           ) : (
-            <PrimaryButton onPress={reserveNow}>{event.tier === 'premium' ? 'VIEW MEMBER UPGRADE' : 'RESERVE MEMBER ADMISSION'}</PrimaryButton>
+            <PrimaryButton onPress={() => void reserveNow()}>{event.tier === 'premium' ? 'VIEW MEMBER UPGRADE' : 'RESERVE MEMBER ADMISSION'}</PrimaryButton>
           )}
           {event.ticketTypes.length > 0 && <>
             <View style={styles.salesDivider}><View style={styles.line} /><Text style={styles.or}>OR BUY A TICKET</Text><View style={styles.line} /></View>
