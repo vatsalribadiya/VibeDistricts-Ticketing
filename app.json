@@ -29,7 +29,8 @@
           "cameraPermission": "Allow Vibe Districts staff to scan event tickets."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-status-bar"
     ],
     "extra": {
       "pilotCity": "Washington, DC"
