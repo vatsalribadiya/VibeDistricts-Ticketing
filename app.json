@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Vibe Districts",
+    "slug": "vibe-districts",
+    "version": "1.1.2",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "vibedistricts",
+    "splash": {
+      "backgroundColor": "#080706"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.vibedistricts.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Vibe Districts uses your city to show eligible nearby events."
+      }
+    },
+    "android": {
+      "package": "com.vibedistricts.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#080706"
+      }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Vibe Districts staff to scan event tickets."
+        }
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "pilotCity": "Washington, DC"
+    }
+  }
+}
