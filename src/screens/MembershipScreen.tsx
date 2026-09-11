@@ -19,7 +19,7 @@ export function MembershipScreen({ visible, onClose }: { visible: boolean; onClo
       return;
     }
     onClose();
-    Alert.alert('Welcome to Vibe Districts', result.message);
+    Alert.alert('Stripe Checkout opened', result.message);
   };
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -57,7 +57,7 @@ export function MembershipScreen({ visible, onClose }: { visible: boolean; onClo
             ))}
           </View>
           <PrimaryButton onPress={complete}>{submitting ? 'ACTIVATING…' : `START ${selected.toUpperCase()} MEMBERSHIP`}</PrimaryButton>
-          <Text style={styles.demo}>Temporary test activation. Stripe checkout comes next.</Text>
+          <Text style={styles.demo}>Secure subscription payment powered by Stripe.</Text>
         </ScrollView>
       </SafeAreaView>
     </Modal>

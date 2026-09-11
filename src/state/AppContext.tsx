@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
+import { AppState, Linking } from 'react-native';
 import { EVENTS } from '../data/events';
 import { cancelCloudReservation, reserveCloudEvent } from '../services/events';
-import { activateDemoMembership, getMembership } from '../services/memberships';
+import { createMembershipCheckout, getMembership } from '../services/memberships';
 import { CheckInResult, EventItem, MemberProfile, Membership, MembershipPlan, Reservation, Ticket, TicketOrder } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -103,6 +104,15 @@ export function AppStateProvider({ children }: PropsWithChildren) {
   }, [storageKey]);
 
   useEffect(() => {
+    if (!session) return;
+    const listener = AppState.addEventListener('change', state => {
+      if (state !== 'active') return;
+      getMembership().then(next => setMembership(next ?? defaultMembership)).catch(() => undefined);
+    });
+    return () => listener.remove();
+  }, [session]);
+
+  useEffect(() => {
     if (hydratedKey !== storageKey) return;
     AsyncStorage.setItem(storageKey, JSON.stringify({ membership, reservations, orders, tickets, profile, hasOnboarded })).catch(
       () => undefined,
@@ -111,9 +121,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
   const activate = async (plan: MembershipPlan) => {
     try {
-      const nextMembership = await activateDemoMembership(plan);
-      setMembership(nextMembership);
-      return { ok: true, message: 'Your membership is active.' };
+      const checkoutUrl = await createMembershipCheckout(plan);
+      await Linking.openURL(checkoutUrl);
+      return { ok: true, message: 'Complete payment in Stripe Checkout, then return to the app.' };
     } catch (error) {
       return { ok: false, message: errorMessage(error, 'Membership could not be activated.') };
     }

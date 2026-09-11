@@ -23,8 +23,10 @@ export async function getMembership(): Promise<Membership | null> {
   return data ? mapMembership(data) : null;
 }
 
-export async function activateDemoMembership(plan: MembershipPlan): Promise<Membership> {
-  const { data, error } = await client().rpc('activate_demo_membership', { target_plan: plan }).single();
+export async function createMembershipCheckout(plan: MembershipPlan): Promise<string> {
+  const { data, error } = await client().functions.invoke('create-stripe-checkout', { body: { plan } });
   if (error) throw error;
-  return mapMembership(data as Record<string, any>);
+  if (data?.error) throw new Error(data.error);
+  if (!data?.url) throw new Error('Stripe Checkout URL was not returned.');
+  return data.url as string;
 }
