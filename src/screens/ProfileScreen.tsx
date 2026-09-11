@@ -1,14 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton, TextButton } from '../components/Buttons';
 import { useAppState } from '../state/AppContext';
+import { createBillingPortal } from '../services/memberships';
 import { colors } from '../theme/colors';
 import { UserRole } from '../types';
 
 export function ProfileScreen({ canOpenScanner, onOpenScanner, onSignOut, role }: { canOpenScanner: boolean; onOpenScanner: () => void; onSignOut: () => Promise<void>; role: UserRole }) {
   const { membership, profile, reservations, tickets, resetDemo } = useAppState();
   const initials = profile?.fullName.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase() || 'VD';
+  const manageMembership = async () => {
+    try {
+      await Linking.openURL(await createBillingPortal());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Billing portal could not be opened.';
+      Alert.alert('Unable to manage membership', message);
+    }
+  };
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -21,6 +30,9 @@ export function ProfileScreen({ canOpenScanner, onOpenScanner, onSignOut, role }
           <Row icon="ticket-outline" label="Paid tickets" value={String(tickets.length)} />
           <Row icon="shield-outline" label="Account role" value={role} />
         </View>
+        {role === 'customer' && membership.active && (
+          <View style={styles.manage}><PrimaryButton onPress={() => void manageMembership()}>MANAGE MEMBERSHIP</PrimaryButton></View>
+        )}
         {canOpenScanner && <View style={styles.operator}>
           <Text style={styles.operatorLabel}>PILOT OPERATIONS</Text>
           <Text style={styles.operatorTitle}>Door check-in</Text>
@@ -65,4 +77,5 @@ const styles = StyleSheet.create({
   operatorLabel: { color: colors.champagne, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
   operatorTitle: { color: colors.cream, fontSize: 20, fontWeight: '900' },
   operatorBody: { color: colors.muted, fontSize: 11, lineHeight: 16, marginBottom: 5 },
+  manage: { marginBottom: 16 },
 });

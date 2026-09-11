@@ -30,3 +30,11 @@ export async function createMembershipCheckout(plan: MembershipPlan): Promise<st
   if (!data?.url) throw new Error('Stripe Checkout URL was not returned.');
   return data.url as string;
 }
+
+export async function createBillingPortal(): Promise<string> {
+  const { data, error } = await client().functions.invoke('create-stripe-portal');
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  if (!data?.url) throw new Error('Stripe billing portal URL was not returned.');
+  return data.url as string;
+}
