@@ -28,6 +28,8 @@ export interface TicketType {
   price: number;
   serviceFee: number;
   quantityRemaining: number;
+  quantityTotal?: number;
+  quantitySold?: number;
   salesOpen: boolean;
   description: string;
 }

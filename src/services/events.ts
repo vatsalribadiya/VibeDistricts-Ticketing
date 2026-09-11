@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { EventItem, EventTier, Reservation } from '../types';
+import { EventItem, EventTier, Reservation, TicketType } from '../types';
 
 export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed';
 
@@ -19,6 +19,7 @@ export interface ManagedEvent {
   memberCapacity: number;
   memberReservedCount: number;
   createdBy: string;
+  ticketTypes: TicketType[];
 }
 
 export interface EventDraft {
@@ -45,17 +46,24 @@ function mapManaged(row: Record<string, any>): ManagedEvent {
     venue: row.venue, city: row.city, startsAt: row.starts_at, endsAt: row.ends_at,
     status: row.status, tier: row.tier, ageRequirement: row.age_requirement,
     dressCode: row.dress_code, memberCapacity: row.member_capacity, memberReservedCount: row.member_reserved_count ?? 0, createdBy: row.created_by,
+    ticketTypes: (row.ticket_types ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order).map(mapTicketType),
   };
 }
 
+function mapTicketType(row: Record<string, any>): TicketType {
+  return { id: row.id, name: row.name, description: row.description, price: row.price_cents / 100,
+    serviceFee: row.service_fee_cents / 100, quantityRemaining: Math.max(row.quantity_total - row.quantity_sold, 0),
+    quantityTotal: row.quantity_total, quantitySold: row.quantity_sold, salesOpen: row.sales_open };
+}
+
 export async function listOperationalEvents() {
-  const { data, error } = await client().from('events').select('*').order('starts_at');
+  const { data, error } = await client().from('events').select('*, ticket_types(*)').order('starts_at');
   if (error) throw error;
   return (data ?? []).map(mapManaged);
 }
 
 export async function listPublishedEvents() {
-  const { data, error } = await client().from('events').select('*').eq('status', 'published').order('starts_at');
+  const { data, error } = await client().from('events').select('*, ticket_types(*)').eq('status', 'published').order('starts_at');
   if (error) throw error;
   return (data ?? []).map(mapManaged).map(toEventItem);
 }
@@ -131,6 +139,22 @@ export async function deleteEvent(id: string) {
   if (error) throw error;
 }
 
+export interface TicketTypeDraft { name: string; description: string; price: number; serviceFee: number; quantityTotal: number; salesOpen: boolean; }
+
+export async function saveTicketType(eventId: string, draft: TicketTypeDraft, id?: string) {
+  const values = { event_id: eventId, name: draft.name.trim(), description: draft.description.trim(),
+    price_cents: Math.round(draft.price * 100), service_fee_cents: Math.round(draft.serviceFee * 100),
+    quantity_total: draft.quantityTotal, sales_open: draft.salesOpen, updated_at: new Date().toISOString() };
+  const query = id ? client().from('ticket_types').update(values).eq('id', id) : client().from('ticket_types').insert(values);
+  const { error } = await query;
+  if (error) throw error;
+}
+
+export async function deleteTicketType(id: string) {
+  const { error } = await client().from('ticket_types').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export async function reserveCloudEvent(eventId: string) {
   const { data, error } = await client().rpc('reserve_event', { target_event_id: eventId }).single();
   if (error) throw error;
@@ -152,6 +176,6 @@ function toEventItem(event: ManagedEvent): EventItem {
     date: event.startsAt, displayDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase(),
     time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), tier: event.tier,
     memberSpotsRemaining: Math.max(event.memberCapacity - event.memberReservedCount, 0), accent: event.tier === 'premium' ? '#382016' : '#25332B',
-    tags: [event.tier], dressCode: event.dressCode, age: event.ageRequirement, ticketTypes: [],
+    tags: [event.tier], dressCode: event.dressCode, age: event.ageRequirement, ticketTypes: event.ticketTypes.filter(item => item.salesOpen),
   };
 }
