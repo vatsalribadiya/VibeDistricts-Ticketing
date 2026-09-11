@@ -51,9 +51,9 @@ function AppShell() {
       {tab === 'events' && <EventsScreen onEvent={setSelectedEvent} />}
       {tab === 'pass' && <PassScreen onJoin={() => setMembershipOpen(true)} />}
       {tab === 'tickets' && <TicketsScreen />}
-      {tab === 'admin' && auth.profile.role === 'admin' && <AdminDashboardScreen />}
+      {tab === 'admin' && (auth.profile.role === 'admin' || Boolean(auth.staffPermissions?.canViewGuestList)) && <AdminDashboardScreen />}
       {tab === 'profile' && <ProfileScreen canOpenScanner={canScan} onOpenScanner={() => setScannerOpen(true)} onSignOut={auth.signOut} role={auth.profile.role} />}
-      <TabBar selected={tab} onSelect={setTab} showAdmin={auth.profile.role === 'admin'} />
+      <TabBar selected={tab} onSelect={setTab} showAdmin={auth.profile.role === 'admin' || Boolean(auth.staffPermissions?.canViewGuestList)} />
       <MembershipScreen visible={membershipOpen} onClose={() => setMembershipOpen(false)} />
       <EventDetailScreen event={selectedEvent} onClose={() => setSelectedEvent(null)} onJoin={() => setMembershipOpen(true)} />
       <ScannerScreen visible={scannerOpen} onClose={() => setScannerOpen(false)} />
@@ -66,7 +66,7 @@ const tabs: { key: TabKey; label: string; active: keyof typeof Ionicons.glyphMap
   { key: 'events', label: 'Events', active: 'calendar', inactive: 'calendar-outline' },
   { key: 'pass', label: 'Member Pass', active: 'qr-code', inactive: 'qr-code-outline' },
   { key: 'tickets', label: 'My Tickets', active: 'ticket', inactive: 'ticket-outline' },
-  { key: 'admin', label: 'Admin', active: 'settings', inactive: 'settings-outline' },
+  { key: 'admin', label: 'Ops', active: 'settings', inactive: 'settings-outline' },
   { key: 'profile', label: 'Profile', active: 'person', inactive: 'person-outline' },
 ];
 
