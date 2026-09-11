@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { FauxQR } from '../components/FauxQR';
+import QRCode from 'react-native-qrcode-svg';
 import { PrimaryButton } from '../components/Buttons';
 import { useAppState } from '../state/AppContext';
 import { useEvents } from '../state/EventsContext';
@@ -37,9 +37,9 @@ export function PassScreen({ onJoin }: { onJoin: () => void }) {
             <Text style={styles.passLabel}>UPCOMING ADMISSION</Text>
             <Text style={styles.eventTitle}>{event.title}</Text>
             <Text style={styles.eventMeta}>{event.displayDate} · {event.venue}</Text>
-            <View style={styles.qrWrap}><FauxQR seed={nextReservation.confirmationCode} /></View>
+            <View style={styles.qrWrap}><QRCode value={`VDM1|${nextReservation.eventId}|${nextReservation.admissionToken}`} size={210} backgroundColor="#FFFFFF" color="#080706" /></View>
             <Text style={styles.code}>{nextReservation.confirmationCode}</Text>
-            <Text style={styles.security}>Demo QR · Production pass will rotate before entry</Text>
+            <Text style={styles.security}>Secure member admission · Do not share this pass</Text>
             <View style={styles.nameRow}><View style={styles.memberName}><Text style={styles.nameLabel}>MEMBER</Text><Text numberOfLines={1} style={styles.name}>{profile?.fullName ?? 'Vibe Districts Member'}</Text></View><View><Text style={styles.nameLabel}>PLAN</Text><Text style={styles.name}>{membership.plan}</Text></View></View>
           </View>
         ) : (

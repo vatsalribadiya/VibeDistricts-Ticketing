@@ -99,4 +99,5 @@ export interface Reservation {
   reservedAt: string;
   status: 'confirmed' | 'cancelled' | 'attended';
   confirmationCode: string;
+  admissionToken: string;
 }

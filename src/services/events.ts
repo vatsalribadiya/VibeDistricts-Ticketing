@@ -63,7 +63,7 @@ export async function listPublishedEvents() {
 export async function listCustomerReservations(userId: string): Promise<Reservation[]> {
   const { data, error } = await client()
     .from('event_reservations')
-    .select('event_id, reserved_at, status, confirmation_code')
+    .select('event_id, reserved_at, status, confirmation_code, admission_token')
     .eq('user_id', userId)
     .order('reserved_at', { ascending: false });
   if (error) throw error;
@@ -72,7 +72,33 @@ export async function listCustomerReservations(userId: string): Promise<Reservat
     reservedAt: row.reserved_at,
     status: row.status,
     confirmationCode: row.confirmation_code,
+    admissionToken: row.admission_token,
   }));
+}
+
+export async function checkInMemberPass(payload: string) {
+  const parts = payload.split('|');
+  if (parts.length !== 3 || parts[0] !== 'VDM1') {
+    return { ok: false, title: 'Invalid pass', message: 'This is not a Vibe Districts member pass.' };
+  }
+  const [, eventId, admissionToken] = parts;
+  const { data, error } = await client().rpc('check_in_member_pass', {
+    target_event_id: eventId,
+    scanned_token: admissionToken,
+  }).single();
+  if (error) throw error;
+  const result = data as { outcome: string; guest_name: string; event_title: string; check_in_time: string | null };
+  if (result.outcome === 'admitted') {
+    return { ok: true, title: 'Admit member', message: `${result.guest_name} · ${result.event_title}` };
+  }
+  if (result.outcome === 'already_used') {
+    const used = result.check_in_time ? new Date(result.check_in_time).toLocaleTimeString() : 'earlier';
+    return { ok: false, title: 'Already checked in', message: `${result.guest_name} was admitted at ${used}.` };
+  }
+  if (result.outcome === 'cancelled') {
+    return { ok: false, title: 'Reservation cancelled', message: 'This member pass is no longer valid.' };
+  }
+  return { ok: false, title: 'Invalid pass', message: 'No matching member reservation was found.' };
 }
 
 export async function createEvent(draft: EventDraft, createdBy: string) {

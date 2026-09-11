@@ -150,7 +150,8 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
     try {
       const cloud = await reserveCloudEvent(event.id);
-      setReservations(current => [...current, { eventId: event.id, reservedAt: new Date().toISOString(), status: 'confirmed', confirmationCode: cloud.confirmationCode }]);
+      const cloudReservations = session ? await listCustomerReservations(session.user.id) : [];
+      setReservations(cloudReservations);
       setMembership(current => ({ ...current, creditsRemaining: cloud.creditsRemaining }));
       return { ok: true, message: `Your member admission is confirmed. ${cloud.spotsRemaining} spots remain.` };
     } catch (error) {
