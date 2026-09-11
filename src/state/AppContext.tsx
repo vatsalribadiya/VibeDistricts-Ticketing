@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState, Linking } from 'react-native';
 import { EVENTS } from '../data/events';
-import { cancelCloudReservation, reserveCloudEvent } from '../services/events';
+import { cancelCloudReservation, listCustomerReservations, reserveCloudEvent } from '../services/events';
 import { createMembershipCheckout, getMembership } from '../services/memberships';
 import { CheckInResult, EventItem, MemberProfile, Membership, MembershipPlan, Reservation, Ticket, TicketOrder } from '../types';
 import { useAuth } from './AuthContext';
@@ -78,8 +78,12 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     setProfile(null);
     setHasOnboarded(false);
 
-    Promise.all([AsyncStorage.getItem(storageKey), session ? getMembership() : Promise.resolve(null)])
-      .then(([value, cloudMembership]) => {
+    Promise.all([
+      AsyncStorage.getItem(storageKey),
+      session ? getMembership() : Promise.resolve(null),
+      session ? listCustomerReservations(session.user.id) : Promise.resolve([]),
+    ])
+      .then(([value, cloudMembership, cloudReservations]) => {
         if (cancelled) return;
         if (value) {
           const parsed = JSON.parse(value) as {
@@ -90,13 +94,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
           profile?: MemberProfile | null;
           hasOnboarded: boolean;
         };
-          setReservations(parsed.reservations);
           setOrders(parsed.orders ?? []);
           setTickets(parsed.tickets ?? []);
           setProfile(parsed.profile ?? null);
           setHasOnboarded(parsed.hasOnboarded);
         }
         setMembership(cloudMembership ?? defaultMembership);
+        setReservations(cloudReservations);
       })
       .catch(() => undefined)
       .finally(() => { if (!cancelled) setHydratedKey(storageKey); });
@@ -107,7 +111,12 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     if (!session) return;
     const listener = AppState.addEventListener('change', state => {
       if (state !== 'active') return;
-      getMembership().then(next => setMembership(next ?? defaultMembership)).catch(() => undefined);
+      Promise.all([getMembership(), listCustomerReservations(session.user.id)])
+        .then(([nextMembership, nextReservations]) => {
+          setMembership(nextMembership ?? defaultMembership);
+          setReservations(nextReservations);
+        })
+        .catch(() => undefined);
     });
     return () => listener.remove();
   }, [session]);
@@ -232,7 +241,6 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         setHasOnboarded(true);
       },
       resetDemo: () => {
-        setReservations([]);
         setOrders([]);
         setTickets([]);
         setProfile(null);

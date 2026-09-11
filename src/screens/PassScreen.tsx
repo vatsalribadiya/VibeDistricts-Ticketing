@@ -16,6 +16,9 @@ export function PassScreen({ onJoin }: { onJoin: () => void }) {
     .find(item => item.event);
   const nextReservation = activePass?.reservation;
   const event = activePass?.event;
+  const history = reservations
+    .map(reservation => ({ reservation, event: events.find(item => item.id === reservation.eventId) }))
+    .filter(item => item.event);
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -46,6 +49,20 @@ export function PassScreen({ onJoin }: { onJoin: () => void }) {
             <Text style={styles.emptyBody}>Reserve an included event and your secure admission pass will appear here.</Text>
           </View>
         )}
+        {membership.active && history.length > 0 && (
+          <View style={styles.history}>
+            <Text style={styles.historyTitle}>Reservation history</Text>
+            {history.map(({ reservation, event: historyEvent }) => (
+              <View key={`${reservation.eventId}-${reservation.reservedAt}`} style={styles.historyRow}>
+                <View style={styles.historyCopy}>
+                  <Text numberOfLines={1} style={styles.historyEvent}>{historyEvent!.title}</Text>
+                  <Text style={styles.historyMeta}>{historyEvent!.displayDate} · {reservation.confirmationCode}</Text>
+                </View>
+                <Text style={[styles.historyStatus, reservation.status === 'confirmed' && styles.confirmed]}>{reservation.status}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -73,4 +90,12 @@ const styles = StyleSheet.create({
   memberName: { flex: 1, paddingRight: 16 },
   nameLabel: { color: '#766852', fontSize: 8, letterSpacing: 1.2, fontWeight: '900' },
   name: { color: colors.black, fontSize: 12, fontWeight: '800', marginTop: 4, textTransform: 'capitalize' },
+  history: { marginTop: 24, padding: 18, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  historyTitle: { color: colors.cream, fontSize: 17, fontWeight: '800', marginBottom: 8 },
+  historyRow: { minHeight: 62, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, gap: 12 },
+  historyCopy: { flex: 1 },
+  historyEvent: { color: colors.cream, fontSize: 13, fontWeight: '700' },
+  historyMeta: { color: colors.muted, fontSize: 9, marginTop: 5 },
+  historyStatus: { color: colors.muted, fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
+  confirmed: { color: colors.success },
 });

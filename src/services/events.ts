@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { EventItem, EventTier } from '../types';
+import { EventItem, EventTier, Reservation } from '../types';
 
 export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed';
 
@@ -58,6 +58,21 @@ export async function listPublishedEvents() {
   const { data, error } = await client().from('events').select('*').eq('status', 'published').order('starts_at');
   if (error) throw error;
   return (data ?? []).map(mapManaged).map(toEventItem);
+}
+
+export async function listCustomerReservations(userId: string): Promise<Reservation[]> {
+  const { data, error } = await client()
+    .from('event_reservations')
+    .select('event_id, reserved_at, status, confirmation_code')
+    .eq('user_id', userId)
+    .order('reserved_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(row => ({
+    eventId: row.event_id,
+    reservedAt: row.reserved_at,
+    status: row.status,
+    confirmationCode: row.confirmation_code,
+  }));
 }
 
 export async function createEvent(draft: EventDraft, createdBy: string) {
