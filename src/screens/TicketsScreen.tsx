@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { FauxQR } from '../components/FauxQR';
+import QRCode from 'react-native-qrcode-svg';
 import { useAppState } from '../state/AppContext';
 import { useEvents } from '../state/EventsContext';
 import { colors } from '../theme/colors';
@@ -18,12 +18,12 @@ export function TicketsScreen() {
       <View style={styles.ticket}>
         <View style={styles.top}><Text style={styles.brand}>VIBE DISTRICTS</Text><Text style={[styles.status, selected.status === 'used' && styles.used]}>{selected.status.toUpperCase()}</Text></View>
         <Text style={styles.event}>{event?.title ?? selected.eventTitle ?? 'Event ticket'}</Text><Text style={styles.meta}>{event?.displayDate ?? selected.eventDisplayDate ?? ''} · {event?.venue ?? selected.eventVenue ?? 'Vibe Districts'}</Text>
-        <View style={styles.qr}><FauxQR seed={selected.qrPayload} size={189} /></View>
+        <View style={styles.qr}><QRCode value={selected.qrPayload} size={189} color="#050505" backgroundColor="#E7D3AA" /></View>
         <Text style={styles.ticketType}>{selected.ticketTypeName}</Text><Text style={styles.code}>{selected.id}</Text>
         <View style={styles.holder}><Text style={styles.holderLabel}>TICKET HOLDER</Text><Text style={styles.holderName}>{selected.holderName}</Text></View>
       </View>
       {tickets.length > 1 && <View style={styles.selector}>{tickets.map((ticket, index) => <Pressable key={ticket.id} onPress={() => setSelectedId(ticket.id)} style={[styles.dot, ticket.id === selected.id && styles.dotActive]}><Text style={styles.dotText}>{index + 1}</Text></Pressable>)}</View>}
-      <Text style={styles.security}>Each QR code admits one guest once. Screenshots should not be accepted after production rotating tokens are enabled.</Text>
+      <Text style={styles.security}>Each QR code admits one guest once and is validated against the live door database.</Text>
     </>}
   </ScrollView></SafeAreaView>;
 }

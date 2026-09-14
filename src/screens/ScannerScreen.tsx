@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useState } from 'react';
 import { Modal, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton, TextButton } from '../components/Buttons';
-import { checkInMemberPass } from '../services/events';
+import { checkInAdmission } from '../services/events';
 import { colors } from '../theme/colors';
 import { CheckInResult } from '../types';
 
@@ -14,7 +14,7 @@ export function ScannerScreen({ visible, onClose }: { visible: boolean; onClose:
     if (locked) return;
     setLocked(true);
     try {
-      setResult(await checkInMemberPass(payload));
+      setResult(await checkInAdmission(payload));
     } catch (error) {
       setResult({ ok: false, title: 'Check-in unavailable', message: error instanceof Error ? error.message : 'The pass could not be verified.' });
     }

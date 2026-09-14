@@ -4,7 +4,8 @@ import { AppState, Linking } from 'react-native';
 import { EVENTS } from '../data/events';
 import { cancelCloudReservation, listCustomerReservations, reserveCloudEvent } from '../services/events';
 import { createMembershipCheckout, getMembership } from '../services/memberships';
-import { CheckInResult, EventItem, MemberProfile, Membership, MembershipPlan, Reservation, Ticket, TicketOrder } from '../types';
+import { createTicketCheckout, listPaidTickets } from '../services/tickets';
+import { EventItem, MemberProfile, Membership, MembershipPlan, Reservation, Ticket, TicketOrder } from '../types';
 import { useAuth } from './AuthContext';
 
 interface AppStateValue {
@@ -17,8 +18,7 @@ interface AppStateValue {
   activate: (plan: MembershipPlan) => Promise<{ ok: boolean; message: string }>;
   reserve: (event: EventItem) => Promise<{ ok: boolean; message: string }>;
   cancelReservation: (eventId: string) => Promise<{ ok: boolean; message: string }>;
-  purchaseTickets: (event: EventItem, ticketTypeId: string, quantity: number) => { ok: boolean; message: string; orderId?: string };
-  checkInTicket: (qrPayload: string) => CheckInResult;
+  purchaseTickets: (event: EventItem, ticketTypeId: string, quantity: number) => Promise<{ ok: boolean; message: string }>;
   reservationFor: (eventId: string) => Reservation | undefined;
   finishOnboarding: (profile: MemberProfile) => void;
   resetDemo: () => void;
@@ -35,18 +35,6 @@ const defaultMembership: Membership = {
 
 const STORAGE_KEY_PREFIX = '@vibe-districts/demo-state-v2';
 const AppStateContext = createContext<AppStateValue | null>(null);
-
-function confirmationCode() {
-  return `VD-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-}
-
-function makeId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`.toUpperCase();
-}
-
-function ticketPayload(ticketId: string, eventId: string) {
-  return `VDT1|${ticketId}|${eventId}|${Math.random().toString(36).slice(2, 14)}`;
-}
 
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
@@ -82,8 +70,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       AsyncStorage.getItem(storageKey),
       session ? getMembership() : Promise.resolve(null),
       session ? listCustomerReservations(session.user.id) : Promise.resolve([]),
+      session ? listPaidTickets(session.user.id, session.user.user_metadata?.full_name ?? session.user.email ?? 'Vibe Districts Guest') : Promise.resolve([]),
     ])
-      .then(([value, cloudMembership, cloudReservations]) => {
+      .then(([value, cloudMembership, cloudReservations, cloudTickets]) => {
         if (cancelled) return;
         if (value) {
           const parsed = JSON.parse(value) as {
@@ -95,12 +84,12 @@ export function AppStateProvider({ children }: PropsWithChildren) {
           hasOnboarded: boolean;
         };
           setOrders(parsed.orders ?? []);
-          setTickets(parsed.tickets ?? []);
           setProfile(parsed.profile ?? null);
           setHasOnboarded(parsed.hasOnboarded);
         }
         setMembership(cloudMembership ?? defaultMembership);
         setReservations(cloudReservations);
+        setTickets(cloudTickets);
       })
       .catch(() => undefined)
       .finally(() => { if (!cancelled) setHydratedKey(storageKey); });
@@ -111,10 +100,15 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     if (!session) return;
     const listener = AppState.addEventListener('change', state => {
       if (state !== 'active') return;
-      Promise.all([getMembership(), listCustomerReservations(session.user.id)])
-        .then(([nextMembership, nextReservations]) => {
+      Promise.all([
+        getMembership(),
+        listCustomerReservations(session.user.id),
+        listPaidTickets(session.user.id, session.user.user_metadata?.full_name ?? session.user.email ?? 'Vibe Districts Guest'),
+      ])
+        .then(([nextMembership, nextReservations, nextTickets]) => {
           setMembership(nextMembership ?? defaultMembership);
           setReservations(nextReservations);
+          setTickets(nextTickets);
         })
         .catch(() => undefined);
     });
@@ -172,58 +166,19 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const purchaseTickets = (event: EventItem, ticketTypeId: string, quantity: number) => {
+  const purchaseTickets = async (event: EventItem, ticketTypeId: string, quantity: number) => {
     const type = event.ticketTypes.find(item => item.id === ticketTypeId);
     if (!type || !type.salesOpen) return { ok: false, message: 'This ticket is not currently on sale.' };
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 8) return { ok: false, message: 'Choose between 1 and 8 tickets.' };
     if (type.quantityRemaining < quantity) return { ok: false, message: 'There are not enough tickets remaining.' };
 
-    const orderId = makeId('ORD');
-    const purchasedAt = new Date().toISOString();
-    const order: TicketOrder = {
-      id: orderId,
-      eventId: event.id,
-      ticketTypeId,
-      quantity,
-      subtotal: type.price * quantity,
-      fees: type.serviceFee * quantity,
-      total: (type.price + type.serviceFee) * quantity,
-      status: 'paid',
-      purchasedAt,
-      paymentMode: 'demo',
-    };
-    const issued = Array.from({ length: quantity }, () => {
-      const id = makeId('TKT');
-      return {
-        id,
-        orderId,
-        eventId: event.id,
-        ticketTypeId,
-        ticketTypeName: type.name,
-        holderName: profile?.fullName ?? 'Vibe Districts Member',
-        purchasedAt,
-        status: 'valid' as const,
-        qrPayload: ticketPayload(id, event.id),
-        checkedInAt: null,
-        eventTitle: event.title,
-        eventDisplayDate: event.displayDate,
-        eventVenue: event.venue,
-      };
-    });
-    setOrders(current => [...current, order]);
-    setTickets(current => [...current, ...issued]);
-    return { ok: true, message: `${quantity} ticket${quantity === 1 ? '' : 's'} issued.`, orderId };
-  };
-
-  const checkInTicket = (qrPayload: string): CheckInResult => {
-    const index = tickets.findIndex(item => item.qrPayload === qrPayload);
-    if (index < 0) return { ok: false, title: 'Invalid ticket', message: 'This QR code was not issued by this pilot.' };
-    const ticket = tickets[index]!;
-    if (ticket.status === 'used') return { ok: false, title: 'Already checked in', message: `Used at ${new Date(ticket.checkedInAt!).toLocaleTimeString()}.`, ticket };
-    if (ticket.status !== 'valid') return { ok: false, title: 'Ticket unavailable', message: `Ticket status: ${ticket.status}.`, ticket };
-    const updated = { ...ticket, status: 'used' as const, checkedInAt: new Date().toISOString() };
-    setTickets(current => current.map(item => item.id === updated.id ? updated : item));
-    return { ok: true, title: 'Admit guest', message: `${ticket.ticketTypeName} · ${ticket.holderName}`, ticket: updated };
+    try {
+      const checkoutUrl = await createTicketCheckout(ticketTypeId, quantity);
+      await Linking.openURL(checkoutUrl);
+      return { ok: true, message: 'Complete payment in Stripe Checkout, then return to the app. Your tickets will appear automatically.' };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error, 'Ticket checkout could not be started.') };
+    }
   };
 
   const value = useMemo<AppStateValue>(
@@ -238,7 +193,6 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       reserve,
       cancelReservation,
       purchaseTickets,
-      checkInTicket,
       reservationFor: eventId => reservations.find(item => item.eventId === eventId && item.status === 'confirmed'),
       finishOnboarding: memberProfile => {
         setProfile(memberProfile);

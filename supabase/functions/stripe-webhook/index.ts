@@ -62,7 +62,16 @@ Deno.serve(async req => {
   if (claimError) return new Response(claimError.message, { status: 500 });
 
   try {
-    if (event.type.startsWith('customer.subscription.')) {
+    const object = event.data.object as any;
+    const isTicket = object?.metadata?.kind === 'paid_ticket';
+    if (event.type === 'checkout.session.completed' && isTicket) {
+      if (object.payment_status !== 'paid') throw new Error('Ticket Checkout payment is not paid');
+      const { error } = await admin.rpc('complete_ticket_order', { target_order_id: object.metadata.order_id, checkout_session_id: object.id, payment_intent_id: typeof object.payment_intent === 'string' ? object.payment_intent : object.payment_intent?.id ?? '' });
+      if (error) throw error;
+    } else if (event.type === 'checkout.session.expired' && isTicket) {
+      const { error } = await admin.rpc('release_pending_ticket_order', { target_order_id: object.metadata.order_id });
+      if (error) throw error;
+    } else if (event.type.startsWith('customer.subscription.')) {
       await syncSubscription(event.data.object as Stripe.Subscription);
     } else if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;

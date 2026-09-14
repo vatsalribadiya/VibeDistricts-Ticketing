@@ -52,7 +52,7 @@ function mapManaged(row: Record<string, any>): ManagedEvent {
 
 function mapTicketType(row: Record<string, any>): TicketType {
   return { id: row.id, name: row.name, description: row.description, price: row.price_cents / 100,
-    serviceFee: row.service_fee_cents / 100, quantityRemaining: Math.max(row.quantity_total - row.quantity_sold, 0),
+    serviceFee: row.service_fee_cents / 100, quantityRemaining: Math.max(row.quantity_total - row.quantity_sold - (row.quantity_reserved ?? 0), 0),
     quantityTotal: row.quantity_total, quantitySold: row.quantity_sold, salesOpen: row.sales_open };
 }
 
@@ -107,6 +107,28 @@ export async function checkInMemberPass(payload: string) {
     return { ok: false, title: 'Reservation cancelled', message: 'This member pass is no longer valid.' };
   }
   return { ok: false, title: 'Invalid pass', message: 'No matching member reservation was found.' };
+}
+
+export async function checkInAdmission(payload: string) {
+  if (payload.startsWith('VDM1|')) return checkInMemberPass(payload);
+  const parts = payload.split('|');
+  if (parts.length !== 3 || parts[0] !== 'VDT1') {
+    return { ok: false, title: 'Invalid admission', message: 'This is not a Vibe Districts QR code.' };
+  }
+  const [, eventId, admissionToken] = parts;
+  const { data, error } = await client().rpc('check_in_paid_ticket', {
+    target_event_id: eventId,
+    scanned_token: admissionToken,
+  }).single();
+  if (error) throw error;
+  const result = data as { outcome: string; guest_name: string; event_title: string; ticket_name: string; check_in_time: string | null };
+  if (result.outcome === 'admitted') return { ok: true, title: 'Admit guest', message: `${result.guest_name} · ${result.ticket_name} · ${result.event_title}` };
+  if (result.outcome === 'already_used') {
+    const used = result.check_in_time ? new Date(result.check_in_time).toLocaleTimeString() : 'earlier';
+    return { ok: false, title: 'Already checked in', message: `${result.guest_name} was admitted at ${used}.` };
+  }
+  if (result.outcome === 'refunded' || result.outcome === 'void') return { ok: false, title: 'Ticket unavailable', message: `This ticket is ${result.outcome}.` };
+  return { ok: false, title: 'Invalid ticket', message: 'No matching paid ticket was found for this event.' };
 }
 
 export async function createEvent(draft: EventDraft, createdBy: string) {

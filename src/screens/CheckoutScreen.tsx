@@ -17,13 +17,16 @@ export function CheckoutScreen({ event, visible, onClose }: { event: EventItem; 
   const fees = (selected?.serviceFee ?? 0) * quantity;
   const total = subtotal + fees;
 
-  const pay = () => {
+  const pay = async () => {
     setProcessing(true);
-    setTimeout(() => {
-      const result = purchaseTickets(event, typeId, quantity);
+    try {
+      const result = await purchaseTickets(event, typeId, quantity);
       setProcessing(false);
-      Alert.alert(result.ok ? 'Purchase complete' : 'Purchase unavailable', result.ok ? `${result.message}\n\nYour QR ticket is ready in My Tickets.` : result.message, result.ok ? [{ text: 'View later', onPress: onClose }] : undefined);
-    }, 650);
+      Alert.alert(result.ok ? 'Stripe Checkout opened' : 'Purchase unavailable', result.message, result.ok ? [{ text: 'OK', onPress: onClose }] : undefined);
+    } catch {
+      setProcessing(false);
+      Alert.alert('Purchase unavailable', 'Ticket checkout could not be started.');
+    }
   };
 
   return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -42,8 +45,8 @@ export function CheckoutScreen({ event, visible, onClose }: { event: EventItem; 
         <Pressable accessibilityLabel="Increase quantity" onPress={() => setQuantity(Math.min(8, quantity + 1))}><Ionicons name="add-circle-outline" size={30} color={colors.champagne} /></Pressable>
       </View></View>
       <View style={styles.summary}><Line label="Tickets" value={`$${subtotal.toFixed(2)}`} /><Line label="Service fee" value={`$${fees.toFixed(2)}`} /><View style={styles.divider} /><Line label="Total" value={`$${total.toFixed(2)}`} strong /></View>
-      <View style={styles.demo}><Ionicons name="flask-outline" size={18} color={colors.champagne} /><Text style={styles.demoText}>Pilot demo: this issues a real in-app QR ticket without charging a card. Connect Stripe before public sales.</Text></View>
-      <PrimaryButton onPress={pay} disabled={!selected || processing}>{processing ? 'PROCESSING…' : `DEMO PAY $${total.toFixed(2)}`}</PrimaryButton>
+      <View style={styles.demo}><Ionicons name="shield-checkmark-outline" size={18} color={colors.champagne} /><Text style={styles.demoText}>Secure payment is completed in Stripe Checkout. Inventory is held while you finish payment.</Text></View>
+      <PrimaryButton onPress={() => void pay()} disabled={!selected || processing}>{processing ? 'OPENING STRIPE…' : `PAY $${total.toFixed(2)}`}</PrimaryButton>
     </ScrollView></SafeAreaView>
   </Modal>;
 }
