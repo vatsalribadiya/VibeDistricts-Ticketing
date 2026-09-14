@@ -2,15 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FauxQR } from '../components/FauxQR';
-import { EVENTS } from '../data/events';
 import { useAppState } from '../state/AppContext';
+import { useEvents } from '../state/EventsContext';
 import { colors } from '../theme/colors';
 
 export function TicketsScreen() {
   const { tickets } = useAppState();
+  const { events } = useEvents();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = tickets.find(item => item.id === selectedId) ?? tickets[0];
-  const event = useMemo(() => EVENTS.find(item => item.id === selected?.eventId), [selected]);
+  const event = useMemo(() => events.find(item => item.id === selected?.eventId), [events, selected]);
   return <SafeAreaView style={styles.root}><ScrollView contentContainerStyle={styles.content}>
     <Text style={styles.eyebrow}>ADMISSION WALLET</Text><Text style={styles.title}>My tickets</Text>
     {!selected || !event ? <View style={styles.empty}><Ionicons name="ticket-outline" size={42} color={colors.champagne} /><Text style={styles.emptyTitle}>No paid tickets yet</Text><Text style={styles.emptyBody}>Open an event and choose Buy Tickets. Member reservations appear in the Member Pass tab.</Text></View> : <>
