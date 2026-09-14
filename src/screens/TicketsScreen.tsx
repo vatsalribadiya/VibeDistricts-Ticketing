@@ -14,10 +14,10 @@ export function TicketsScreen() {
   const event = useMemo(() => events.find(item => item.id === selected?.eventId), [events, selected]);
   return <SafeAreaView style={styles.root}><ScrollView contentContainerStyle={styles.content}>
     <Text style={styles.eyebrow}>ADMISSION WALLET</Text><Text style={styles.title}>My tickets</Text>
-    {!selected || !event ? <View style={styles.empty}><Ionicons name="ticket-outline" size={42} color={colors.champagne} /><Text style={styles.emptyTitle}>No paid tickets yet</Text><Text style={styles.emptyBody}>Open an event and choose Buy Tickets. Member reservations appear in the Member Pass tab.</Text></View> : <>
+    {!selected ? <View style={styles.empty}><Ionicons name="ticket-outline" size={42} color={colors.champagne} /><Text style={styles.emptyTitle}>No paid tickets yet</Text><Text style={styles.emptyBody}>Open an event and choose Buy Tickets. Member reservations appear in the Member Pass tab.</Text></View> : <>
       <View style={styles.ticket}>
         <View style={styles.top}><Text style={styles.brand}>VIBE DISTRICTS</Text><Text style={[styles.status, selected.status === 'used' && styles.used]}>{selected.status.toUpperCase()}</Text></View>
-        <Text style={styles.event}>{event.title}</Text><Text style={styles.meta}>{event.displayDate} · {event.venue}</Text>
+        <Text style={styles.event}>{event?.title ?? selected.eventTitle ?? 'Event ticket'}</Text><Text style={styles.meta}>{event?.displayDate ?? selected.eventDisplayDate ?? ''} · {event?.venue ?? selected.eventVenue ?? 'Vibe Districts'}</Text>
         <View style={styles.qr}><FauxQR seed={selected.qrPayload} size={189} /></View>
         <Text style={styles.ticketType}>{selected.ticketTypeName}</Text><Text style={styles.code}>{selected.id}</Text>
         <View style={styles.holder}><Text style={styles.holderLabel}>TICKET HOLDER</Text><Text style={styles.holderName}>{selected.holderName}</Text></View>

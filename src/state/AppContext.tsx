@@ -205,6 +205,9 @@ export function AppStateProvider({ children }: PropsWithChildren) {
         status: 'valid' as const,
         qrPayload: ticketPayload(id, event.id),
         checkedInAt: null,
+        eventTitle: event.title,
+        eventDisplayDate: event.displayDate,
+        eventVenue: event.venue,
       };
     });
     setOrders(current => [...current, order]);

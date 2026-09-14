@@ -65,6 +65,9 @@ export interface Ticket {
   status: TicketStatus;
   qrPayload: string;
   checkedInAt: string | null;
+  eventTitle?: string;
+  eventDisplayDate?: string;
+  eventVenue?: string;
 }
 
 export interface TicketOrder {
